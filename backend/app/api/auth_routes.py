@@ -15,7 +15,7 @@ def get_db():
         yield db
     finally:
         db.close()
-
+ 
 
 @router.post("/register")
 def register(user: UserCreate, db: Session = Depends(get_db)):
