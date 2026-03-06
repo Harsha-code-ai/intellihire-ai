@@ -1,11 +1,15 @@
 import random
 import requests
+import os
 
 # Hugging Face model
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
+# Read token from environment variable
+HF_TOKEN = os.getenv("HF_TOKEN")
+
 headers = {
-    "Authorization": "Bearer YOUR_HF_TOKEN"
+    "Authorization": f"Bearer {HF_TOKEN}"
 }
 
 # fallback questions (if AI fails)
@@ -50,12 +54,9 @@ questions = {
 }
 
 
-# Generate interview question using AI
-
 def generate_question(role: str):
 
     try:
-
         prompt = f"Generate one technical interview question for a {role} developer."
 
         payload = {
@@ -74,9 +75,6 @@ def generate_question(role: str):
     except:
         pass
 
-
-    # fallback if AI fails
-
     role = role.lower()
 
     if role in questions:
@@ -88,7 +86,6 @@ def generate_question(role: str):
 def evaluate_answer(answer: str):
 
     try:
-
         prompt = f"""
         Evaluate the following interview answer.
 
@@ -116,8 +113,6 @@ def evaluate_answer(answer: str):
         }
 
     except:
-
-        # fallback if AI fails
 
         length = len(answer)
 
