@@ -6,7 +6,7 @@ import os
 API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
 # Read token from environment variable
-HF_TOKEN = os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("HF_API_KEY")
 
 headers = {
     "Authorization": f"Bearer {HF_TOKEN}"
