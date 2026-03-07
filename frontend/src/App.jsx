@@ -1,6 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 
+const API_URL = "https://intellihire-ai-6.onrender.com";
+
 function App() {
 
   const [role, setRole] = useState("");
@@ -29,7 +31,7 @@ function App() {
   const evaluateAnswer = async () => {
 
     const res = await axios.post(
-      "http://127.0.0.1:8000/evaluate-answer",
+      `${API_URL}/generate-question`,
       { answer: answer }
     );
 
@@ -42,7 +44,7 @@ function App() {
   const saveInterview = async () => {
 
     await axios.post(
-      "http://127.0.0.1:8000/save-interview",
+      `${API_URL}/save-interview`
       {
         role: role,
         question: question,
@@ -58,7 +60,7 @@ function App() {
   const loadHistory = async () => {
 
     const res = await axios.get(
-      "http://127.0.0.1:8000/interview-history"
+      `${API_URL}/interview-history`
     );
 
     setHistory(res.data);
@@ -70,7 +72,7 @@ function App() {
     formData.append("file", resumeFile);
 
     const res = await axios.post(
-      "http://127.0.0.1:8000/analyze-resume",
+      `${API_URL}/analyze-resume`,
       formData
     );
 
