@@ -44,7 +44,7 @@ function App() {
   const saveInterview = async () => {
 
     await axios.post(
-      `${API_URL}/save-interview`
+      `${API_URL}/save-interview`,
       {
         role: role,
         question: question,
@@ -60,7 +60,7 @@ function App() {
   const loadHistory = async () => {
 
     const res = await axios.get(
-      `${API_URL}/interview-history`
+      `${API_URL}/interview-history`,
     );
 
     setHistory(res.data);
