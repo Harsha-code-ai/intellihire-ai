@@ -24,12 +24,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+# ✅ FIXED FUNCTION
 def hash_password(password: str) -> str:
+    # 🔥 Fix bcrypt 72-byte limit
+    password = password[:72]
     return pwd_context.hash(password)
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(plain[:72], hashed)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -56,13 +59,18 @@ def get_current_user(
 ) -> User:
     if not credentials:
         raise HTTPException(status_code=401, detail="Not authenticated")
+
     payload = decode_token(credentials.credentials)
     email: str = payload.get("sub")
+
     if not email:
         raise HTTPException(status_code=401, detail="Invalid token payload")
+
     user = db.query(User).filter(User.email == email).first()
+
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+
     return user
 
 
