@@ -12,8 +12,7 @@ python-dotenv==1.0.1
 
 # Database
 SQLAlchemy==2.0.30
-# Uncomment for PostgreSQL on Render:
-# psycopg2-binary==2.9.9
+psycopg2-binary==2.9.9
 
 # Auth
 passlib[bcrypt]==1.7.4
