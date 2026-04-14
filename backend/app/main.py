@@ -25,31 +25,27 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# ─── CORS ────────────────────────────────────────────────────────────────────
-# Reads extra allowed origins from ALLOWED_ORIGINS env var (comma-separated).
-# Always includes localhost dev ports and the production Vercel domain.
+# ─── CORS ─────────────────────────────────────────────────────────────────────
 _extra_origins = [
     o.strip()
     for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
     if o.strip()
 ]
 
-ALLOWED_ORIGINS = list(
-    {
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:3000",
-        "https://intellihire-ai.vercel.app",
-        *_extra_origins,
-    }
-)
+ALLOWED_ORIGINS = list({
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+    "https://intellihire-ai.vercel.app",
+    *_extra_origins,
+})
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     allow_headers=["*"],
     expose_headers=["X-Process-Time"],
     max_age=600,
@@ -72,14 +68,11 @@ async def add_process_time_header(request: Request, call_next):
     return response
 
 
-# ─── Global exception handler ────────────────────────────────────────────────
+# ─── Global exception handler ─────────────────────────────────────────────────
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal server error"},
-    )
+    return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
 
 # ─── Startup ──────────────────────────────────────────────────────────────────
@@ -87,14 +80,13 @@ async def global_exception_handler(request: Request, exc: Exception):
 async def startup():
     try:
         from app.database import engine, Base
-        import app.models.user       # noqa: F401  — register models
-        import app.models.resume     # noqa: F401
-        import app.models.interview  # noqa: F401
+        import app.models.user
+        import app.models.resume
+        import app.models.interview
 
         Base.metadata.create_all(bind=engine)
         logger.info("✅ Database tables verified/created")
     except Exception as e:
-        # Log but don't crash — DB might be read-only on first cold boot
         logger.error(f"⚠️  Database startup error (non-fatal): {e}", exc_info=True)
 
     logger.info("🚀 IntelliHire Pro backend started")
@@ -114,22 +106,21 @@ except Exception as e:
 
 
 # ─── Health endpoints ─────────────────────────────────────────────────────────
-@app.get("/", tags=["Health"])
+# ✅ FIX: Added HEAD method so Render's health monitor doesn't get 405 errors
+@app.api_route("/", methods=["GET", "HEAD"], tags=["Health"])
 def root():
     return {"status": "ok", "message": "IntelliHire Pro API v2.0 running"}
 
 
-@app.get("/health", tags=["Health"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Health"])
 def health():
-    """
-    Render pings this route to keep the service alive.
-    Also does a quick DB connectivity check.
-    """
+    """Render pings this to keep the service alive. Also checks DB."""
     db_status = "unknown"
     try:
         from app.database import SessionLocal
+        import sqlalchemy
         db = SessionLocal()
-        db.execute(__import__("sqlalchemy").text("SELECT 1"))
+        db.execute(sqlalchemy.text("SELECT 1"))
         db.close()
         db_status = "ok"
     except Exception as e:
