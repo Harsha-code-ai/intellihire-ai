@@ -99,7 +99,6 @@ def generate_questions(role: str, skills: list[str], num_questions: int = 5):
     except Exception as e:
         logger.error(f"generate_questions error: {e}")
 
-    # fallback
     return [
         {"question": f"What are key responsibilities of a {role}?"},
         {"question": f"Explain important skills required for {role}."},
@@ -137,6 +136,35 @@ def compute_job_fit(
         "strengths": ["Basic matching skills"],
         "gaps": ["Detailed AI analysis not available"],
         "improvements": ["Add more projects", "Improve skills"]
+    }
+
+
+# ================= EVALUATE ANSWER (FIXED) =================
+
+def evaluate_answer(question: str, answer: str) -> dict:
+    try:
+        result = _chat(
+            system=(
+                "You are an expert interviewer. "
+                "Evaluate the answer and return JSON:\n"
+                '{"score": 0-10, "feedback": "text", "correct": true}'
+            ),
+            user=f"Question: {question}\nAnswer: {answer}",
+            temperature=0.3,
+        )
+
+        if result:
+            data = _clean_json(result)
+            if isinstance(data, dict):
+                return data
+
+    except Exception as e:
+        logger.error(f"evaluate_answer error: {e}")
+
+    return {
+        "score": 5,
+        "feedback": "Evaluation service temporarily unavailable.",
+        "correct": True
     }
 
 
