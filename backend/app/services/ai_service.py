@@ -107,7 +107,7 @@ def generate_questions(role: str, skills: list[str], num_questions: int = 5):
     ]
 
 
-# ================= RESUME ANALYSIS (FIX FOR YOUR ERROR) =================
+# ================= RESUME ANALYSIS =================
 
 def analyze_resume_ai(text: str) -> dict:
     return {
@@ -120,6 +120,23 @@ def analyze_resume_ai(text: str) -> dict:
         "domain": "General",
         "resume_score": 50,
         "score_breakdown": {}
+    }
+
+
+# ================= JOB FIT =================
+
+def compute_job_fit(
+    resume_summary: str,
+    skills: list[str],
+    job_role: str,
+    job_description: str,
+) -> dict:
+    return {
+        "fit_score": 60,
+        "fit_breakdown": {},
+        "strengths": ["Basic matching skills"],
+        "gaps": ["Detailed AI analysis not available"],
+        "improvements": ["Add more projects", "Improve skills"]
     }
 
 
