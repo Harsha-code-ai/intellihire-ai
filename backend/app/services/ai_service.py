@@ -14,7 +14,7 @@ OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "").strip()
 # Fallback to OpenRouter URL if env var is missing/empty
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1").strip() or "https://openrouter.ai/api/v1"
 # ✅ FIX: Use a real, free OpenRouter model
-MODEL           = os.getenv("OPENAI_MODEL", "meta-llama/llama-3.1-8b-instruct:free")
+MODEL           = os.getenv("OPENAI_MODEL", "mistralai/mistral-7b-instruct:free")
 REQUEST_TIMEOUT = int(os.getenv("OPENAI_TIMEOUT", "45"))
 
 _client = None
