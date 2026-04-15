@@ -100,18 +100,21 @@ def _clean_json(text: str):
 
 # ================= INTERVIEW QUESTIONS =================
 
-def generate_questions(role: str, skills: list, num_questions: int = 5):
-    logger.info(f"generate_questions called | role={role} | skills={skills} | model={MODEL}")
+def generate_questions(role: str, skills: list, num_questions: int = 5, difficulty: str = "medium"):
+    # Added difficulty to the logger so you can track it in Render
+    logger.info(f"generate_questions called | role={role} | skills={skills} | difficulty={difficulty} | model={MODEL}")
     try:
         result = _chat(
             system=(
                 "You are an expert interviewer. "
                 "Generate ROLE-SPECIFIC, SKILL-BASED interview questions. "
+                "Adjust the technical depth and complexity of the questions to match the requested difficulty level. "
                 "Avoid generic questions. "
                 "Return ONLY a valid JSON array with no extra text:\n"
                 '[{"question": "text"}]'
             ),
-            user=f"Role: {role}\nSkills: {', '.join(skills)}",
+            # Added difficulty to the user prompt
+            user=f"Role: {role}\nSkills: {', '.join(skills)}\nDifficulty: {difficulty}",
             temperature=0.9,
         )
 
@@ -137,8 +140,7 @@ def generate_questions(role: str, skills: list, num_questions: int = 5):
         {"question": "How do you approach solving complex technical problems?"},
         {"question": f"Describe a challenging project related to {', '.join(skills[:2]) if skills else role}."},
         {"question": "How do you stay updated with industry trends?"},
-    ][:num_questions]
-
+    ][:num_questions] 
 
 # ================= RESUME ANALYSIS =================
 
