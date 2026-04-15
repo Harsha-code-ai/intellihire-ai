@@ -87,10 +87,16 @@ def _clean_json(text: str):
 
 # ================= INTERVIEW QUESTIONS =================
 
-def generate_questions(role: str, skills: list, num_questions: int = 5, difficulty: str = "medium"):
-    logger.info(f"generate_questions | role={role} | difficulty={difficulty}")
+def generate_questions(
+    role: str,
+    skills: list,
+    num_questions: int = 5,
+    difficulty: str = "medium",
+    include_behavioral: bool = False   # ✅ FIX ADDED
+):
+    logger.info(f"generate_questions | role={role} | difficulty={difficulty} | behavioral={include_behavioral}")
 
-    # 🔥 SAFETY FIX (VERY IMPORTANT)
+    # safety: convert skills if string
     if isinstance(skills, str):
         skills = [s.strip() for s in skills.split(",") if s.strip()]
 
@@ -100,10 +106,11 @@ def generate_questions(role: str, skills: list, num_questions: int = 5, difficul
                 "You are an expert interviewer. "
                 "Generate ROLE-SPECIFIC interview questions. "
                 "Adjust difficulty level as requested. "
+                "Include behavioral questions if requested. "
                 "Return ONLY JSON array:\n"
                 '[{"question": "text"}]'
             ),
-            user=f"Role: {role}\nSkills: {', '.join(skills)}\nDifficulty: {difficulty}",
+            user=f"Role: {role}\nSkills: {', '.join(skills)}\nDifficulty: {difficulty}\nBehavioral: {include_behavioral}",
             temperature=0.9,
         )
 
@@ -154,8 +161,8 @@ def evaluate_answer(question: str, answer: str) -> dict:
             data = _clean_json(result)
             if isinstance(data, dict):
                 return data
-    except:
-        pass
+    except Exception as e:
+        logger.error(f"evaluate_answer error: {e}", exc_info=True)
 
     return {
         "score": 5,
