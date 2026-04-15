@@ -4,7 +4,6 @@ import os
 import re
 from typing import Optional
 
-
 import httpx
 from dotenv import load_dotenv
 
@@ -12,9 +11,7 @@ load_dotenv()
 logger = logging.getLogger("intellihire.ai")
 
 OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "").strip()
-# Fallback to OpenRouter URL if env var is missing/empty
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1").strip() or "https://openrouter.ai/api/v1"
-# ✅ FIX: Use a real, free OpenRouter model
 MODEL           = os.getenv("OPENAI_MODEL", "mistralai/mistral-7b-instruct:free")
 REQUEST_TIMEOUT = int(os.getenv("OPENAI_TIMEOUT", "45"))
 
@@ -26,7 +23,7 @@ _client = None
 def _get_client():
     global _client
     if not OPENAI_API_KEY:
-        logger.warning("❌ OPENAI_API_KEY is not set — AI features disabled")
+        logger.warning("❌ OPENAI_API_KEY is not set — AI disabled")
         return None
     if _client is None:
         try:
@@ -34,14 +31,13 @@ def _get_client():
             _client = OpenAI(
                 api_key=OPENAI_API_KEY,
                 base_url=OPENAI_BASE_URL,
-                # ✅ FIX: OpenRouter requires these headers
                 default_headers={
-                    "HTTP-Referer": "https://intellihire.app",   # your site URL
-                    "X-Title": "IntelliHire Pro",                # your app name
+                    "HTTP-Referer": "https://intellihire.app",
+                    "X-Title": "IntelliHire Pro",
                 },
                 http_client=httpx.Client(timeout=REQUEST_TIMEOUT),
             )
-            logger.info(f"✅ OpenRouter client initialized | base_url={OPENAI_BASE_URL} | model={MODEL}")
+            logger.info(f"✅ OpenRouter client initialized | model={MODEL}")
         except Exception as e:
             logger.error(f"Client init failed: {e}", exc_info=True)
             return None
@@ -53,29 +49,21 @@ def _get_client():
 def _chat(system: str, user: str, temperature: float = 0.7) -> Optional[str]:
     client = _get_client()
     if not client:
-        logger.warning("_chat skipped: no client available")
         return None
     try:
-        logger.debug(f"Calling OpenRouter | model={MODEL} | base_url={OPENAI_BASE_URL}")
         resp = client.chat.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": system},
-                {"role": "user",   "content": user},
+                {"role": "user", "content": user},
             ],
             temperature=temperature,
         )
         if not resp or not resp.choices:
-            logger.warning("OpenRouter returned empty response / no choices")
             return None
-
-        content = resp.choices[0].message.content
-        logger.info(f"✅ OpenRouter response received ({len(content or '')} chars)")
-        return content.strip() if content else None
-
+        return resp.choices[0].message.content.strip()
     except Exception as e:
-        # ✅ FIX: Log the FULL error details so you can see exactly what went wrong
-        logger.error(f"❌ OpenRouter API call failed: {type(e).__name__}: {e}", exc_info=True)
+        logger.error(f"❌ API call failed: {e}", exc_info=True)
         return None
 
 
@@ -88,12 +76,11 @@ def _clean_json(text: str):
         text = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("`").strip()
         return json.loads(text)
     except Exception:
-        # Try to extract JSON substring
         match = re.search(r'(\[.*\]|\{.*\})', text, re.DOTALL)
         if match:
             try:
                 return json.loads(match.group(1))
-            except Exception:
+            except:
                 pass
         return None
 
@@ -101,113 +88,77 @@ def _clean_json(text: str):
 # ================= INTERVIEW QUESTIONS =================
 
 def generate_questions(role: str, skills: list, num_questions: int = 5, difficulty: str = "medium"):
-    # Added difficulty to the logger so you can track it in Render
-    logger.info(f"generate_questions called | role={role} | skills={skills} | difficulty={difficulty} | model={MODEL}")
+    logger.info(f"generate_questions | role={role} | difficulty={difficulty}")
+
+    # 🔥 SAFETY FIX (VERY IMPORTANT)
+    if isinstance(skills, str):
+        skills = [s.strip() for s in skills.split(",") if s.strip()]
+
     try:
         result = _chat(
             system=(
                 "You are an expert interviewer. "
-                "Generate ROLE-SPECIFIC, SKILL-BASED interview questions. "
-                "Adjust the technical depth and complexity of the questions to match the requested difficulty level. "
-                "Avoid generic questions. "
-                "Return ONLY a valid JSON array with no extra text:\n"
+                "Generate ROLE-SPECIFIC interview questions. "
+                "Adjust difficulty level as requested. "
+                "Return ONLY JSON array:\n"
                 '[{"question": "text"}]'
             ),
-            # Added difficulty to the user prompt
             user=f"Role: {role}\nSkills: {', '.join(skills)}\nDifficulty: {difficulty}",
             temperature=0.9,
         )
 
         if result:
-            logger.debug(f"Raw AI response: {result[:300]}")
             data = _clean_json(result)
             if isinstance(data, list) and len(data) > 0:
-                logger.info(f"✅ Generated {len(data)} questions from AI")
                 return data[:num_questions]
-            else:
-                logger.warning(f"JSON parse failed or empty list. Raw: {result[:200]}")
-        else:
-            logger.warning("generate_questions: _chat returned None")
 
     except Exception as e:
         logger.error(f"generate_questions error: {e}", exc_info=True)
 
-    # Fallback questions
-    logger.info("Using fallback questions")
+    # fallback
     return [
         {"question": f"What are key responsibilities of a {role}?"},
-        {"question": f"Explain the most important skills required for {role}."},
-        {"question": "How do you approach solving complex technical problems?"},
-        {"question": f"Describe a challenging project related to {', '.join(skills[:2]) if skills else role}."},
-        {"question": "How do you stay updated with industry trends?"},
-    ][:num_questions] 
+        {"question": f"Explain important skills required for {role}."},
+        {"question": "How do you solve technical problems?"},
+    ]
 
-# ================= RESUME ANALYSIS =================
+
+# ================= RESUME =================
 
 def analyze_resume_ai(text: str) -> dict:
     return {
-        "candidate_name": None,
-        "candidate_email": None,
-        "summary": "Resume analysis working (basic mode).",
+        "summary": "Resume processed",
         "skills": [],
         "experience_years": 0,
-        "education": [],
-        "domain": "General",
-        "resume_score": 50,
-        "score_breakdown": {}
     }
 
 
-# ================= JOB FIT =================
-
-def compute_job_fit(
-    resume_summary: str,
-    skills: list,
-    job_role: str,
-    job_description: str,
-) -> dict:
+def compute_job_fit(resume_summary: str, skills: list, job_role: str, job_description: str) -> dict:
     return {
         "fit_score": 60,
-        "fit_breakdown": {},
-        "strengths": ["Basic matching skills"],
-        "gaps": ["Detailed AI analysis not available"],
-        "improvements": ["Add more projects", "Improve skills"]
+        "strengths": [],
+        "gaps": [],
     }
 
 
-# ================= EVALUATE ANSWER =================
+# ================= EVALUATE =================
 
 def evaluate_answer(question: str, answer: str) -> dict:
     try:
         result = _chat(
-            system=(
-                "You are an expert interviewer. "
-                "Evaluate the candidate's answer and return ONLY valid JSON:\n"
-                '{"score": <0-10>, "feedback": "<text>", "correct": <true|false>}'
-            ),
-            user=f"Question: {question}\nAnswer: {answer}",
+            system="Evaluate answer. Return JSON.",
+            user=f"Q: {question}\nA: {answer}",
             temperature=0.3,
         )
-
         if result:
             data = _clean_json(result)
-            if isinstance(data, dict) and "score" in data:
+            if isinstance(data, dict):
                 return data
-
-    except Exception as e:
-        logger.error(f"evaluate_answer error: {e}", exc_info=True)
+    except:
+        pass
 
     return {
         "score": 5,
-        "feedback": "Evaluation service temporarily unavailable.",
+        "feedback": "Basic evaluation",
         "correct": True
     }
-
-
-# ================= UTIL =================
-
-def _safe_float(val, default=0.0):
-    try:
-        return float(val)
-    except Exception:
-        return default
