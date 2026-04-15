@@ -30,3 +30,7 @@ pypdf==4.2.0
 
 # Utilities
 aiofiles==23.2.1
+
+
+# AI (Groq - FAST & FREE)
+groq==0.13.0
